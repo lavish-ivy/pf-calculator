@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SalaryCalc — PF Structure Calculator · FY 2026-27</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0B1829;
+    --navy-mid: #132236;
+    --navy-light: #1C3350;
+    --accent: #4FC3F7;
+    --accent-dim: #1E88A8;
+    --green: #69F0AE;
+    --red: #FF6B6B;
+    --amber: #FFD54F;
+    --text: #E8F4FD;
+    --text-muted: #7A9BB5;
+    --text-dim: #4A6880;
+    --border: rgba(79,195,247,0.12);
+    --border-bright: rgba(79,195,247,0.3);
+    --mono: 'DM Mono', monospace;
+    --sans: 'Sora', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--navy);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(79,195,247,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,195,247,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 48px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .logo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .logo-mark {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+
+  .logo-title {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .regime-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    background: rgba(79,195,247,0.08);
+    border: 1px solid var(--border-bright);
+    border-radius: 4px;
+    padding: 6px 12px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    align-self: flex-start;
+  }
+
+  /* Input section */
+  .input-section {
+    margin-bottom: 40px;
+  }
+
+  .input-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .ctc-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--navy-mid);
+    border: 1px solid var(--border-bright);
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 340px;
+    transition: border-color .2s;
+  }
+
+  .ctc-input-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,195,247,0.08);
+  }
+
+  .currency-prefix {
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--accent);
+    padding: 0 14px;
+    border-right: 1px solid var(--border);
+    line-height: 54px;
+    flex-shrink: 0;
+    background: rgba(79,195,247,0.05);
+  }
+
+  #ctc {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0 16px;
+    width: 100%;
+    height: 54px;
+    letter-spacing: -0.01em;
+  }
+
+  #ctc::placeholder { color: var(--text-dim); }
+
+  .ctc-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 10px;
+    font-family: var(--mono);
+    letter-spacing: .02em;
+  }
+
+  .ctc-note span {
+    color: var(--text-muted);
+  }
+
+  /* Salary split viz */
+  .split-bar-wrap {
+    margin: 28px 0 36px;
+  }
+
+  .split-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .split-bar {
+    display: flex;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    gap: 2px;
+    margin-bottom: 10px;
+  }
+
+  .split-bar .seg-basic { background: var(--accent); flex: 0.5; }
+  .split-bar .seg-hra   { background: rgba(79,195,247,0.45); flex: 0.25; }
+  .split-bar .seg-spl   { background: rgba(79,195,247,0.2); flex: 0.25; }
+
+  .split-tags {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .split-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .split-tag .dot {
+    width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0;
+  }
+
+  .dot-basic { background: var(--accent); }
+  .dot-hra   { background: rgba(79,195,247,0.45); }
+  .dot-spl   { background: rgba(79,195,247,0.2); }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0 0 36px;
+  }
+
+  /* Results grid */
+  .results-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .result-card {
+    background: var(--navy-mid);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+
+  .result-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    opacity: 0.4;
+  }
+
+  .result-card.card-highlight {
+    border-color: rgba(105,240,174,0.2);
+  }
+
+  .result-card.card-highlight::before {
+    background: var(--green);
+    opacity: 0.6;
+  }
+
+  .card-mode {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .card-pf-pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    margin-bottom: 14px;
+    letter-spacing: .05em;
+  }
+
+  .pill-flat { background: rgba(79,195,247,0.1); color: var(--accent); }
+  .pill-pct  { background: rgba(105,240,174,0.1); color: var(--green); }
+
+  .card-take-home-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .card-take-home {
+    font-family: var(--mono);
+    font-size: 30px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+
+  .card-take-home.green { color: var(--green); }
+
+  .card-meta {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .meta-key {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .meta-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* Table */
+  .table-section {
+    margin-bottom: 28px;
+  }
+
+  .table-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--navy-mid);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    table-layout: fixed;
+  }
+
+  .data-table thead tr {
+    background: rgba(79,195,247,0.05);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table thead th {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    text-align: right;
+    font-weight: 400;
+  }
+
+  .data-table thead th:first-child { text-align: left; width: 45%; }
+
+  .data-table tbody tr {
+    border-bottom: 1px solid rgba(79,195,247,0.05);
+    transition: background .1s;
+  }
+
+  .data-table tbody tr:last-child { border-bottom: none; }
+  .data-table tbody tr:hover { background: rgba(79,195,247,0.03); }
+
+  .data-table tbody tr.row-subtotal {
+    background: rgba(79,195,247,0.04);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table tbody tr.row-subtotal td {
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .data-table tbody tr.row-total {
+    background: rgba(105,240,174,0.04);
+    border-top: 1px solid rgba(105,240,174,0.15);
+  }
+
+  .data-table tbody tr.row-total td {
+    font-weight: 500;
+    color: var(--green);
+  }
+
+  .data-table tbody tr.row-spacer td {
+    padding: 4px 0;
+    background: rgba(0,0,0,0.15);
+  }
+
+  .data-table td {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 9px 16px;
+    text-align: right;
+  }
+
+  .data-table td:first-child {
+    text-align: left;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .data-table td.val-red { color: var(--red); }
+  .data-table td.val-accent { color: var(--accent); }
+  .data-table td.val-green { color: var(--green); }
+
+  /* Impact row */
+  .impact-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .impact-card {
+    background: var(--navy-mid);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
+  .impact-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+
+  .impact-val {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .impact-val.green { color: var(--green); }
+  .impact-val.red   { color: var(--red); }
+  .impact-val.amber { color: var(--amber); }
+
+  .impact-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* Verdict */
+  .verdict {
+    background: var(--navy-mid);
+    border: 1px solid var(--border-bright);
+    border-radius: 10px;
+    padding: 18px 22px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .verdict-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .verdict-text {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  .verdict-text strong {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* EPF section */
+  .epf-section {
+    margin-bottom: 28px;
+  }
+
+  .epf-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .epf-control-group {
+    background: var(--navy-mid);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .epf-control-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .epf-control-label span {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: var(--border-bright);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .epf-corpus-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .corpus-card {
+    background: var(--navy-mid);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .corpus-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--amber);
+    opacity: 0.5;
+  }
+
+  .corpus-card.card-highlight-gold {
+    border-color: rgba(255,213,79,0.2);
+  }
+
+  .corpus-card.card-highlight-gold::before {
+    opacity: 0.9;
+  }
+
+  .corpus-pill {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    margin-bottom: 12px;
+    display: inline-block;
+    letter-spacing: .05em;
+    background: rgba(255,213,79,0.08);
+    color: var(--amber);
+  }
+
+  .corpus-val {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--amber);
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+  }
+
+  .corpus-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .corpus-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .corpus-meta-key {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: .05em;
+  }
+
+  .corpus-meta-val {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .corpus-meta-val.green { color: var(--green); }
+  .corpus-meta-val.amber { color: var(--amber); }
+
+  .epf-tax-note {
+    background: rgba(255,213,79,0.05);
+    border: 1px solid rgba(255,213,79,0.12);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    font-family: var(--mono);
+  }
+
+  .epf-tax-note strong { color: var(--amber); font-weight: 500; }
+
+  .epf-growth-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .growth-card {
+    background: var(--navy-mid);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    text-align: center;
+  }
+
+  .growth-year {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .growth-val1 {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+
+  .growth-val2 {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+  }
+
+  .growth-sep {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    margin: 2px 0;
+  }
+
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 32px 0 24px;
+  }
+
+  .section-divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section-divider-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 48px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: .06em;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-card, .impact-card, .verdict {
+    animation: fadeUp .35s ease both;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .results-section { grid-template-columns: 1fr; }
+    .impact-row { grid-template-columns: 1fr; }
+    .app { padding: 28px 16px 48px; }
+    .card-take-home { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="header">
+    <div class="logo">
+      <div class="logo-mark">Salary Tool</div>
+      <div class="logo-title">PF Structure<br>Calculator</div>
+    </div>
+    <div class="regime-badge">New Tax Regime · FY 2026-27</div>
+  </header>
+
+  <section class="input-section">
+    <label class="input-label" for="ctc">Annual CTC</label>
+    <div class="ctc-input-wrap">
+      <div class="currency-prefix">₹</div>
+      <input type="number" id="ctc" value="2400000" step="100000" min="100000" placeholder="0" autocomplete="off">
+    </div>
+    <div class="ctc-note" id="ctc-display">— / month</div>
+
+    <div class="split-bar-wrap">
+      <div class="split-label">Salary structure</div>
+      <div class="split-bar">
+        <div class="seg-basic"></div>
+        <div class="seg-hra"></div>
+        <div class="seg-spl"></div>
+      </div>
+      <div class="split-tags">
+        <div class="split-tag"><div class="dot dot-basic"></div><span id="tag-basic">Basic 50%</span></div>
+        <div class="split-tag"><div class="dot dot-hra"></div><span id="tag-hra">HRA 25%</span></div>
+        <div class="split-tag"><div class="dot dot-spl"></div><span id="tag-spl">Special 25% (PF absorbed here)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <div class="results-section">
+    <div class="result-card" id="card1">
+      <div class="card-pf-pill pill-flat">PF @ ₹1,800 / month</div>
+      <div class="card-take-home-label">Net take-home</div>
+      <div class="card-take-home" id="c1-takehome">—</div>
+      <div class="card-meta">
+        <div class="meta-item">
+          <div class="meta-key">Monthly TDS</div>
+          <div class="meta-val" id="c1-tds">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-key">Annual tax</div>
+          <div class="meta-val" id="c1-tax">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-key">Eff. tax rate</div>
+          <div class="meta-val" id="c1-etr">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-card card-highlight" id="card2">
+      <div class="card-pf-pill pill-pct">PF @ 12% of Basic</div>
+      <div class="card-take-home-label">Net take-home</div>
+      <div class="card-take-home" id="c2-takehome">—</div>
+      <div class="card-meta">
+        <div class="meta-item">
+          <div class="meta-key">Monthly TDS</div>
+          <div class="meta-val" id="c2-tds">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-key">Annual tax</div>
+          <div class="meta-val" id="c2-tax">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-key">Eff. tax rate</div>
+          <div class="meta-val" id="c2-etr">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-section">
+    <div class="table-title">Monthly breakdown</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>PF @ ₹1,800</th>
+          <th>PF @ 12% Basic</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Basic (50%)</td><td id="t-basic1" class="val-accent">—</td><td id="t-basic2" class="val-accent">—</td></tr>
+        <tr><td>HRA (25%)</td><td id="t-hra1">—</td><td id="t-hra2">—</td></tr>
+        <tr><td>Special allowance (net of PF)</td><td id="t-spl1">—</td><td id="t-spl2">—</td></tr>
+        <tr><td>Employer PF (in CTC)</td><td id="t-empf1">—</td><td id="t-empf2">—</td></tr>
+        <tr class="row-subtotal"><td>Gross salary</td><td id="t-gross1">—</td><td id="t-gross2">—</td></tr>
+        <tr class="row-spacer"><td colspan="3"></td></tr>
+        <tr><td>Less: Employee PF</td><td id="t-eepf1" class="val-red">—</td><td id="t-eepf2" class="val-red">—</td></tr>
+        <tr><td>Less: TDS</td><td id="t-tds1" class="val-red">—</td><td id="t-tds2" class="val-red">—</td></tr>
+        <tr class="row-total"><td>Net take-home / month</td><td id="t-nth1">—</td><td id="t-nth2">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-section">
+    <div class="table-title">Annual tax computation</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Particular</th>
+          <th>PF @ ₹1,800</th>
+          <th>PF @ 12% Basic</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Gross annual salary</td><td id="tx-gann1">—</td><td id="tx-gann2">—</td></tr>
+        <tr><td>Less: standard deduction</td><td id="tx-sd1" class="val-red">—</td><td id="tx-sd2" class="val-red">—</td></tr>
+        <tr class="row-subtotal"><td>Net taxable income</td><td id="tx-nti1">—</td><td id="tx-nti2">—</td></tr>
+        <tr><td>Slab tax (new regime)</td><td id="tx-slab1" class="val-red">—</td><td id="tx-slab2" class="val-red">—</td></tr>
+        <tr><td>Less: Sec 87A rebate (up to ₹60,000)</td><td id="tx-rebate1" class="val-accent">—</td><td id="tx-rebate2" class="val-accent">—</td></tr>
+        <tr><td>Add: 4% health & education cess</td><td id="tx-cess1" class="val-red">—</td><td id="tx-cess2" class="val-red">—</td></tr>
+        <tr class="row-subtotal"><td>Total tax payable</td><td id="tx-total1" class="val-red">—</td><td id="tx-total2" class="val-red">—</td></tr>
+        <tr><td>Effective tax rate</td><td id="tx-etr1">—</td><td id="tx-etr2">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="impact-row">
+    <div class="impact-card">
+      <div class="impact-label">Annual tax saving<br>under 12% PF</div>
+      <div class="impact-val green" id="i-taxsave">—</div>
+      <div class="impact-sub" id="i-taxsub">vs ₹1,800 base</div>
+    </div>
+    <div class="impact-card">
+      <div class="impact-label">Annual take-home<br>loss under 12% PF</div>
+      <div class="impact-val red" id="i-thloss">—</div>
+      <div class="impact-sub" id="i-thsub">per month less in hand</div>
+    </div>
+    <div class="impact-card">
+      <div class="impact-label">Net annual<br>cash impact</div>
+      <div class="impact-val" id="i-net">—</div>
+      <div class="impact-sub" id="i-netsub">—</div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <div class="verdict-icon">→</div>
+    <div class="verdict-text" id="verdict-text">Enter your CTC to see the comparison.</div>
+  </div>
+
+  <div class="section-divider">
+    <div class="section-divider-line"></div>
+    <div class="section-divider-label">EPF long-term wealth</div>
+    <div class="section-divider-line"></div>
+  </div>
+
+  <div class="epf-section">
+
+    <div class="epf-controls">
+      <div class="epf-control-group">
+        <div class="epf-control-label">Years to retirement <span id="lbl-years">25</span></div>
+        <input type="range" id="epf-years" min="5" max="35" value="25" step="1">
+      </div>
+      <div class="epf-control-group">
+        <div class="epf-control-label">EPF interest rate (p.a.) <span id="lbl-rate">8.25%</span></div>
+        <input type="range" id="epf-rate" min="7" max="10" value="8.25" step="0.25">
+      </div>
+    </div>
+
+    <div class="epf-tax-note">
+      <strong>Tax treatment:</strong> EPF maturity is fully tax-free if service &gt; 5 years.
+      However, interest on employee PF contributions exceeding <strong>&#8377;2.5L/year</strong> is taxable at your marginal slab rate.
+      Employer contributions above <strong>&#8377;7.5L/year</strong> are taxable as perquisite.
+      The corpus figures below reflect gross corpus and a net-of-tax estimate on excess interest.
+    </div>
+
+    <div class="epf-corpus-cards">
+      <div class="corpus-card">
+        <div class="corpus-pill">PF @ &#8377;1,800 / month</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">Total EPF corpus at retirement</div>
+        <div class="corpus-val" id="e-corpus1">&#8212;</div>
+        <div class="corpus-meta">
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Annual contribution (ee+er)</span><span class="corpus-meta-val" id="e-ann1">&#8212;</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Total invested</span><span class="corpus-meta-val" id="e-invested1">&#8212;</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Interest earned</span><span class="corpus-meta-val green" id="e-interest1">&#8212;</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Taxable interest (employee &gt;2.5L)</span><span class="corpus-meta-val" id="e-taxint1">&#8212;</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Est. tax on excess interest</span><span class="corpus-meta-val" id="e-inttax1">&#8212;</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Net corpus (post-tax)</span><span class="corpus-meta-val amber" id="e-net1">&#8212;</span></div>
+        </div>
+      </div>
+
+      <div class="corpus-card card-highlight-gold">
+        <div class="corpus-pill">PF @ 12% of Basic</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">Total EPF corpus at retirement</div>
+        <div class="corpus-val" id="e-corpus2">&#8212;</div>
+        <div class="corpus-meta">
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Annual contribution (ee+er)</span><span class="corpus-meta-val" id="e-ann2">&#8212;</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Total invested</span><span class="corpus-meta-val" id="e-invested2">&#8212;</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Interest earned</span><span class="corpus-meta-val green" id="e-interest2">&#8212;</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Taxable interest (employee &gt;2.5L)</span><span class="corpus-meta-val" id="e-taxint2">&#8212;</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Est. tax on excess interest</span><span class="corpus-meta-val" id="e-inttax2">&#8212;</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Net corpus (post-tax)</span><span class="corpus-meta-val amber" id="e-net2">&#8212;</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:10px;color:var(--text-dim);font-family:var(--mono);margin-bottom:12px">
+      Corpus at 5-year milestones &nbsp;&#183;&nbsp; &#8377;1,800 vs 12% of Basic
+    </div>
+    <div class="epf-growth-row" id="growth-milestones"></div>
+
+    <div class="verdict" style="border-color:rgba(255,213,79,0.3);margin-top:16px">
+      <div class="verdict-icon" style="color:var(--amber)">&#8594;</div>
+      <div class="verdict-text" id="epf-verdict">&#8212;</div>
+    </div>
+
+  </div>
+
+  <footer class="footer">
+    <span>New Tax Regime · FY 2026-27 · Slabs unchanged from FY 2025-26 · Sec 87A rebate ₹60,000 (taxable income ≤ ₹12L) · 4% H&E Cess · ₹75,000 std deduction</span>
+    <span>Structure: Basic 50% · HRA 25% · Special 25%</span>
+  </footer>
+
+</div>
+
+<script>
+const f = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const p = n => (n * 100).toFixed(1) + '%';
+const SD = 75000;
+
+function calcSlabTax(income) {
+  const slabs = [
+    [400000, 0], [400000, 0.05], [400000, 0.10],
+    [400000, 0.15], [400000, 0.20], [400000, 0.25], [Infinity, 0.30]
+  ];
+  let tax = 0, rem = Math.max(0, income);
+  for (const [lim, rate] of slabs) {
+    const chunk = Math.min(rem, lim);
+    tax += chunk * rate;
+    rem -= chunk;
+    if (rem <= 0) break;
+  }
+  return tax;
+}
+
+function applyRebateAndMarginalRelief(slabTax, taxableIncome) {
+  const REBATE_LIMIT = 1200000;
+  const MAX_REBATE   = 60000;
+  if (taxableIncome <= REBATE_LIMIT) {
+    // Full rebate — zero tax
+    return 0;
+  }
+  // Marginal relief zone: tax capped at (income − 12L) if that is less than raw slab tax
+  const excessAboveLimit = taxableIncome - REBATE_LIMIT;
+  const taxAfterRebate   = Math.max(0, slabTax - MAX_REBATE);
+  // Apply marginal relief: pay only the lesser of (slab tax − rebate) or excess income
+  return Math.min(taxAfterRebate, excessAboveLimit);
+}
+
+function calcScenario(ctc, empPF) {
+  const mo      = ctc / 12;
+  const basic   = mo * 0.5;
+  const hra     = mo * 0.25;
+  const spl     = mo * 0.25 - empPF;
+  const gross   = basic + hra + spl;
+  const grossAnn = gross * 12;
+  const taxable  = Math.max(0, grossAnn - SD);
+  const slabTax  = calcSlabTax(taxable);
+  const taxAfterRebate = applyRebateAndMarginalRelief(slabTax, taxable);
+  const cess     = taxAfterRebate * 0.04;
+  const totalTax = taxAfterRebate + cess;
+  const rebate   = Math.max(0, slabTax - taxAfterRebate);
+  const mtds     = Math.round(totalTax / 12);
+  const takeHome = gross - empPF - mtds;
+  const etr      = grossAnn > 0 ? totalTax / grossAnn : 0;
+  return { empPF, basic, hra, spl, gross, grossAnn, taxable, slabTax, rebate, taxAfterRebate, cess, totalTax, mtds, takeHome, etr };
+}
+
+function set(id, val, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val;
+  if (cls) el.className = cls;
+}
+
+function compute() {
+  const ctc = +document.getElementById('ctc').value || 0;
+  if (ctc <= 0) return;
+
+  const mo = ctc / 12;
+  const pf12 = Math.round(mo * 0.5 * 0.12);
+
+  const s1 = calcScenario(ctc, 1800);
+  const s2 = calcScenario(ctc, pf12);
+
+  set('ctc-display', `${f(Math.round(mo))} / month`);
+
+  set('tag-basic', `Basic 50% — ${f(Math.round(mo * 0.5))}/mo`);
+  set('tag-hra',   `HRA 25% — ${f(Math.round(mo * 0.25))}/mo`);
+  set('tag-spl',   `Special 25% — ${f(Math.round(mo * 0.25))}/mo (PF absorbed here)`);
+
+  set('c1-takehome', f(s1.takeHome));
+  set('c1-tds',  f(s1.mtds));
+  set('c1-tax',  f(s1.totalTax));
+  set('c1-etr',  p(s1.etr));
+
+  set('c2-takehome', f(s2.takeHome));
+  set('c2-tds',  f(s2.mtds));
+  set('c2-tax',  f(s2.totalTax));
+  set('c2-etr',  p(s2.etr));
+
+  set('t-basic1', f(s1.basic));   set('t-basic2', f(s2.basic));
+  set('t-hra1',   f(s1.hra));     set('t-hra2',   f(s2.hra));
+  set('t-spl1',   f(s1.spl));     set('t-spl2',   f(s2.spl));
+  set('t-empf1',  f(s1.empPF));   set('t-empf2',  f(s2.empPF));
+  set('t-gross1', f(s1.gross));   set('t-gross2', f(s2.gross));
+  set('t-eepf1',  `(${f(s1.empPF)})`); set('t-eepf2', `(${f(s2.empPF)})`);
+  set('t-tds1',   `(${f(s1.mtds)})`);  set('t-tds2',  `(${f(s2.mtds)})`);
+  set('t-nth1',   f(s1.takeHome)); set('t-nth2',   f(s2.takeHome));
+
+  set('tx-gann1', f(s1.grossAnn)); set('tx-gann2', f(s2.grossAnn));
+  set('tx-sd1',   `(${f(SD)})`);   set('tx-sd2',   `(${f(SD)})`);
+  set('tx-nti1',  f(s1.taxable));  set('tx-nti2',  f(s2.taxable));
+  set('tx-slab1', f(s1.slabTax));  set('tx-slab2', f(s2.slabTax));
+  set('tx-rebate1', s1.rebate > 0 ? `(${f(s1.rebate)})` : '—');
+  set('tx-rebate2', s2.rebate > 0 ? `(${f(s2.rebate)})` : '—');
+  set('tx-cess1', f(s1.cess));     set('tx-cess2', f(s2.cess));
+  set('tx-total1',f(s1.totalTax)); set('tx-total2',f(s2.totalTax));
+  set('tx-etr1',  p(s1.etr));      set('tx-etr2',  p(s2.etr));
+
+  const taxSave = Math.round(s1.totalTax - s2.totalTax);
+  const thDiff  = Math.round(s1.takeHome - s2.takeHome);
+  const thLoss  = thDiff * 12;
+  const net     = taxSave - thLoss;
+
+  set('i-taxsave', f(taxSave));
+  set('i-thloss',  f(thLoss));
+  set('i-thsub',   `${f(thDiff)} / month less in hand`);
+
+  const netEl = document.getElementById('i-net');
+  if (netEl) {
+    netEl.textContent = (net >= 0 ? '+' : '−') + f(Math.abs(net));
+    netEl.className = 'impact-val ' + (net >= 0 ? 'green' : 'red');
+  }
+  set('i-netsub', net >= 0 ? 'net annual gain under 12%' : 'net annual shortfall under 12%');
+
+  const verdictEl = document.getElementById('verdict-text');
+  const rebateNote = s1.rebate > 0 ? ` Sec 87A rebate of ${f(s1.rebate)} applies — taxable income ≤ ₹12L.` : '';
+  if (verdictEl) {
+    verdictEl.innerHTML =
+      `<strong>PF @₹1,800</strong> puts <strong>${f(thDiff)}/month more in your hand</strong> (${f(thLoss)}/year). ` +
+      `<strong>PF @12%</strong> saves <strong>${f(taxSave)}/year in tax</strong> but that doesn't offset the take-home drop — ` +
+      `net annual cash ${net >= 0 ? 'gain' : 'shortfall'} of <strong>${f(Math.abs(net))}</strong> under the 12% structure.` +
+      rebateNote +
+      ` Choose 12% only if long-term EPF corpus building matters more than current liquidity.`;
+  }
+}
+
+function calcEPF(annualPF, years, rate, marginalRate) {
+  // annualPF = total (employee + employer) annual contribution
+  // FV of growing annuity paid at start of each year
+  const r = rate / 100;
+  let corpus = 0;
+  for (let y = 1; y <= years; y++) {
+    corpus = (corpus + annualPF) * (1 + r);
+  }
+  const totalInvested = annualPF * years;
+  const interest = corpus - totalInvested;
+
+  // Taxable interest: employee contribution > 2.5L/yr attracts tax on interest
+  // employer contribution > 7.5L/yr attracts tax as perquisite
+  // Here we approximate: interest proportionate to employee share above 2.5L
+  const eeAnn = annualPF / 2; // employee = employer split assumed equal
+  const excessEeAnn = Math.max(0, eeAnn - 250000);
+  // Taxable interest = interest on excess employee contribution (proportionate)
+  const taxableIntPct = eeAnn > 0 ? excessEeAnn / eeAnn : 0;
+  const taxableInterest = interest * taxableIntPct * 0.5; // only ee portion of interest
+  const taxOnInterest = taxableInterest * marginalRate * years / years; // rough annual avg
+  // Better: cumulative tax on interest (conservative estimate as lump sum)
+  const estTaxOnInterest = taxableInterest * marginalRate;
+
+  const netCorpus = corpus - estTaxOnInterest;
+  return { corpus, totalInvested, interest, taxableInterest, estTaxOnInterest, netCorpus };
+}
+
+function calcMilestone(annualPF, year, rate) {
+  const r = rate / 100;
+  let c = 0;
+  for (let y = 1; y <= year; y++) c = (c + annualPF) * (1 + r);
+  return c;
+}
+
+function computeEPF() {
+  const ctc   = +document.getElementById('ctc').value || 0;
+  const years = +document.getElementById('epf-years').value || 25;
+  const rate  = +document.getElementById('epf-rate').value || 8.25;
+
+  document.getElementById('lbl-years').textContent = years + ' yrs';
+  document.getElementById('lbl-rate').textContent  = rate.toFixed(2) + '%';
+
+  if (ctc <= 0) return;
+
+  const mo    = ctc / 12;
+  const basic = mo * 0.5;
+  const pf12  = Math.round(basic * 0.12);
+
+  // Annual contributions (ee + er combined)
+  const ann1 = 1800 * 2 * 12;          // both sides ₹1800
+  const ann2 = pf12 * 2 * 12;          // both sides 12% of basic
+
+  // Marginal rate: approximate from s1 etr (use 30% cap)
+  const s1 = calcScenario(ctc, 1800);
+  const marginalRate = s1.etr > 0.25 ? 0.30 : s1.etr > 0.20 ? 0.25 : 0.20;
+
+  const e1 = calcEPF(ann1, years, rate, marginalRate);
+  const e2 = calcEPF(ann2, years, rate, marginalRate);
+
+  const setE = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+
+  setE('e-corpus1',   f(e1.corpus));
+  setE('e-ann1',      f(ann1));
+  setE('e-invested1', f(e1.totalInvested));
+  setE('e-interest1', f(e1.interest));
+  setE('e-taxint1',   f(e1.taxableInterest));
+  setE('e-inttax1',   f(e1.estTaxOnInterest));
+  setE('e-net1',      f(e1.netCorpus));
+
+  setE('e-corpus2',   f(e2.corpus));
+  setE('e-ann2',      f(ann2));
+  setE('e-invested2', f(e2.totalInvested));
+  setE('e-interest2', f(e2.interest));
+  setE('e-taxint2',   f(e2.taxableInterest));
+  setE('e-inttax2',   f(e2.estTaxOnInterest));
+  setE('e-net2',      f(e2.netCorpus));
+
+  // Milestones
+  const milestones = [];
+  for (let y = 5; y <= Math.min(years, 30); y += 5) milestones.push(y);
+  if (milestones.length === 0) milestones.push(years);
+
+  const mEl = document.getElementById('growth-milestones');
+  mEl.innerHTML = milestones.map(y => {
+    const c1 = calcMilestone(ann1, y, rate);
+    const c2 = calcMilestone(ann2, y, rate);
+    return `<div class="growth-card">
+      <div class="growth-year">${y} yr${y>1?'s':''}</div>
+      <div class="growth-val1">${f(c1)}</div>
+      <div class="growth-sep">vs</div>
+      <div class="growth-val2">${f(c2)}</div>
+    </div>`;
+  }).join('');
+
+  const addlCorpus = Math.round(e2.corpus - e1.corpus);
+  const addlNet    = Math.round(e2.netCorpus - e1.netCorpus);
+  const verdictEl  = document.getElementById('epf-verdict');
+  if (verdictEl) {
+    verdictEl.innerHTML =
+      `Over <strong>${years} years</strong> at <strong>${rate.toFixed(2)}% p.a.</strong>, PF @12% builds a corpus of <strong>${f(e2.corpus)}</strong> vs <strong>${f(e1.corpus)}</strong> under &#8377;1,800 — an additional <strong>${f(addlCorpus)}</strong> in gross wealth. ` +
+      `After estimated tax on excess interest, the additional net corpus is <strong>${f(addlNet)}</strong>. ` +
+      `EPF maturity remains tax-free; only interest on employee contributions above &#8377;2.5L/year attracts tax at your ~${Math.round(marginalRate*100)}% marginal rate.`;
+  }
+}
+
+document.getElementById('ctc').addEventListener('input', () => { compute(); computeEPF(); });
+document.getElementById('epf-years').addEventListener('input', computeEPF);
+document.getElementById('epf-rate').addEventListener('input', computeEPF);
+compute();
+computeEPF();
+</script>
+</body>
+</html>
