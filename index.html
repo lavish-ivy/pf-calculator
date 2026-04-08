@@ -969,6 +969,65 @@
 
   </div>
 
+  <div class="section-divider">
+    <div class="section-divider-line"></div>
+    <div class="section-divider-label">FD alternative analysis</div>
+    <div class="section-divider-line"></div>
+  </div>
+
+  <div class="epf-section" id="fd-section">
+
+    <div class="epf-tax-note">
+      <strong>What if you invest the difference in FDs instead?</strong>
+      With PF @₹1,800 you get more monthly take-home. If that extra cash is invested in a bank FD,
+      how does your total wealth (EPF + FD) compare to just having 12% PF?
+      FD interest is <strong>fully taxable</strong> at your marginal slab rate every year, unlike EPF which compounds tax-free.
+    </div>
+
+    <div class="epf-controls" style="grid-template-columns:1fr">
+      <div class="epf-control-group">
+        <div class="epf-control-label">Bank FD rate (3–5 yr tenure) <span id="lbl-fd-rate">7.00%</span></div>
+        <input type="range" id="fd-rate" min="5" max="9" value="7" step="0.25">
+      </div>
+    </div>
+
+    <div class="epf-corpus-cards">
+      <div class="corpus-card" style="border-color:rgba(79,195,247,0.2)">
+        <div class="corpus-pill" style="background:rgba(79,195,247,0.1);color:var(--accent)">₹1,800 PF + FD invest</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">Total wealth at retirement</div>
+        <div class="corpus-val" id="fd-total1" style="color:var(--accent)">—</div>
+        <div class="corpus-meta">
+          <div class="corpus-meta-row"><span class="corpus-meta-key">EPF corpus (₹1,800 PF)</span><span class="corpus-meta-val" id="fd-epf1">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Monthly FD investment</span><span class="corpus-meta-val" id="fd-monthly">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">FD corpus (gross)</span><span class="corpus-meta-val" id="fd-gross">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">FD effective rate (post-tax)</span><span class="corpus-meta-val" id="fd-effrate">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">FD total invested</span><span class="corpus-meta-val" id="fd-invested">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">FD interest earned (post-tax)</span><span class="corpus-meta-val green" id="fd-interest">—</span></div>
+        </div>
+      </div>
+
+      <div class="corpus-card card-highlight-gold">
+        <div class="corpus-pill">12% PF only</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">Total wealth at retirement</div>
+        <div class="corpus-val" id="fd-total2">—</div>
+        <div class="corpus-meta">
+          <div class="corpus-meta-row"><span class="corpus-meta-key">EPF corpus (12% PF)</span><span class="corpus-meta-val" id="fd-epf2">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">EPF rate (tax-free compounding)</span><span class="corpus-meta-val amber" id="fd-epfrate">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Total invested in EPF</span><span class="corpus-meta-val" id="fd-epfinv">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">EPF interest earned</span><span class="corpus-meta-val green" id="fd-epfint">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Additional monthly PF over ₹1,800</span><span class="corpus-meta-val" id="fd-addlpf">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Wealth advantage over FD route</span><span class="corpus-meta-val amber" id="fd-advantage">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="verdict" style="border-color:rgba(79,195,247,0.3);margin-top:16px">
+      <div class="verdict-icon" style="color:var(--accent)">→</div>
+      <div class="verdict-text" id="fd-verdict">—</div>
+    </div>
+
+  </div>
+
   <footer class="footer">
     <span>New Tax Regime · FY 2026-27 · Slabs unchanged from FY 2025-26 · Sec 87A rebate ₹60,000 (taxable income ≤ ₹12L) · 4% H&E Cess · ₹75,000 std deduction</span>
     <span>Structure: Basic 50% · HRA 25% · Special 25%</span>
@@ -998,16 +1057,23 @@ function calcSlabTax(income) {
 
 function applyRebateAndMarginalRelief(slabTax, taxableIncome) {
   const REBATE_LIMIT = 1200000;
-  const MAX_REBATE   = 60000;
   if (taxableIncome <= REBATE_LIMIT) {
-    // Full rebate — zero tax
-    return 0;
+    return 0; // Full Sec 87A rebate — zero tax
   }
-  // Marginal relief zone: tax capped at (income − 12L) if that is less than raw slab tax
+  // Above ₹12L: NO rebate (Sec 87A is all-or-nothing).
+  // Marginal relief prevents cliff: tax capped at (income − ₹12L)
   const excessAboveLimit = taxableIncome - REBATE_LIMIT;
-  const taxAfterRebate   = Math.max(0, slabTax - MAX_REBATE);
-  // Apply marginal relief: pay only the lesser of (slab tax − rebate) or excess income
-  return Math.min(taxAfterRebate, excessAboveLimit);
+  return Math.min(slabTax, excessAboveLimit);
+}
+
+function getMarginalRate(taxableIncome) {
+  if (taxableIncome <= 400000)  return 0;
+  if (taxableIncome <= 800000)  return 0.05;
+  if (taxableIncome <= 1200000) return 0.10;
+  if (taxableIncome <= 1600000) return 0.15;
+  if (taxableIncome <= 2000000) return 0.20;
+  if (taxableIncome <= 2400000) return 0.25;
+  return 0.30;
 }
 
 function calcScenario(ctc, empPF) {
@@ -1097,15 +1163,25 @@ function compute() {
   }
   set('i-netsub', net >= 0 ? 'net annual gain under 12%' : 'net annual shortfall under 12%');
 
+  // NOTE: innerHTML used intentionally with computed numeric values (no user input) for bold formatting
   const verdictEl = document.getElementById('verdict-text');
-  const rebateNote = s1.rebate > 0 ? ` Sec 87A rebate of ${f(s1.rebate)} applies — taxable income ≤ ₹12L.` : '';
   if (verdictEl) {
-    verdictEl.innerHTML =
-      `<strong>PF @₹1,800</strong> puts <strong>${f(thDiff)}/month more in your hand</strong> (${f(thLoss)}/year). ` +
-      `<strong>PF @12%</strong> saves <strong>${f(taxSave)}/year in tax</strong> but that doesn't offset the take-home drop — ` +
-      `net annual cash ${net >= 0 ? 'gain' : 'shortfall'} of <strong>${f(Math.abs(net))}</strong> under the 12% structure.` +
-      rebateNote +
-      ` Choose 12% only if long-term EPF corpus building matters more than current liquidity.`;
+    const rebateNote = s1.rebate > 0 ? ' Sec 87A rebate applies \u2014 taxable income \u2264 \u20B912L.' : '';
+    let verdictBody;
+    if (thDiff <= 0) {
+      verdictBody = 'At this CTC, PF @12% of basic (' + f(pf12) + '/mo) is \u2264 \u20B91,800 \u2014 both scenarios are identical or \u20B91,800 costs more. <strong>Stick with 12% PF.</strong>' + rebateNote;
+    } else if (net >= 0) {
+      verdictBody =
+        '<strong>PF @12%</strong> saves <strong>' + f(taxSave) + '/year in tax</strong>, which more than offsets the <strong>' + f(thDiff) + '/month take-home drop</strong> (' + f(thLoss) + '/year). ' +
+        'Net annual cash gain of <strong>' + f(net) + '</strong> under 12%. <strong>Choose 12% PF</strong> \u2014 you save on tax AND build a larger retirement corpus.' + rebateNote;
+    } else {
+      verdictBody =
+        '<strong>PF @\u20B91,800</strong> puts <strong>' + f(thDiff) + '/month more in your hand</strong> (' + f(thLoss) + '/year). ' +
+        '<strong>PF @12%</strong> saves <strong>' + f(taxSave) + '/year in tax</strong> but doesn\u2019t fully offset the take-home drop \u2014 ' +
+        'net annual cash shortfall of <strong>' + f(Math.abs(net)) + '</strong> under 12%. ' +
+        'Choose 12% only if long-term EPF corpus building matters more than current liquidity.' + rebateNote;
+    }
+    verdictEl.innerHTML = verdictBody;
   }
 }
 
@@ -1161,9 +1237,8 @@ function computeEPF() {
   const ann1 = 1800 * 2 * 12;          // both sides ₹1800
   const ann2 = pf12 * 2 * 12;          // both sides 12% of basic
 
-  // Marginal rate: approximate from s1 etr (use 30% cap)
   const s1 = calcScenario(ctc, 1800);
-  const marginalRate = s1.etr > 0.25 ? 0.30 : s1.etr > 0.20 ? 0.25 : 0.20;
+  const marginalRate = getMarginalRate(s1.taxable);
 
   const e1 = calcEPF(ann1, years, rate, marginalRate);
   const e2 = calcEPF(ann2, years, rate, marginalRate);
@@ -1214,11 +1289,93 @@ function computeEPF() {
   }
 }
 
-document.getElementById('ctc').addEventListener('input', () => { compute(); computeEPF(); });
-document.getElementById('epf-years').addEventListener('input', computeEPF);
-document.getElementById('epf-rate').addEventListener('input', computeEPF);
+function computeFD() {
+  const ctc   = +document.getElementById('ctc').value || 0;
+  const years = +document.getElementById('epf-years').value || 25;
+  const epfRate = +document.getElementById('epf-rate').value || 8.25;
+  const fdRate  = +document.getElementById('fd-rate').value || 7;
+
+  document.getElementById('lbl-fd-rate').textContent = fdRate.toFixed(2) + '%';
+
+  const s = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+
+  if (ctc <= 0) { return; }
+
+  const mo    = ctc / 12;
+  const basic = mo * 0.5;
+  const pf12  = Math.round(basic * 0.12);
+
+  const s1 = calcScenario(ctc, 1800);
+  const s2 = calcScenario(ctc, pf12);
+  const marginalRate = getMarginalRate(s1.taxable);
+
+  const monthlyExtra = Math.max(0, s1.takeHome - s2.takeHome);
+  const annualFD = monthlyExtra * 12;
+
+  // FD: interest taxed annually at marginal rate
+  const fdEffective = (fdRate / 100) * (1 - marginalRate);
+  let fdCorpus = 0;
+  for (let y = 1; y <= years; y++) {
+    fdCorpus = (fdCorpus + annualFD) * (1 + fdEffective);
+  }
+  const fdInvested = annualFD * years;
+  const fdInterest = fdCorpus - fdInvested;
+
+  // EPF corpora (reuse calcEPF)
+  const ann1 = 1800 * 2 * 12;
+  const ann2 = pf12 * 2 * 12;
+  const e1 = calcEPF(ann1, years, epfRate, marginalRate);
+  const e2 = calcEPF(ann2, years, epfRate, marginalRate);
+
+  // Total wealth: route A = EPF(₹1800) + FD corpus; route B = EPF(12%)
+  const totalA = e1.netCorpus + fdCorpus;
+  const totalB = e2.netCorpus;
+  const advantage = totalB - totalA;
+
+  s('fd-total1',    f(totalA));
+  s('fd-epf1',      f(e1.netCorpus));
+  s('fd-monthly',   f(monthlyExtra) + '/mo');
+  s('fd-gross',     f(fdCorpus));
+  s('fd-effrate',   fdEffective > 0 ? (fdEffective * 100).toFixed(2) + '% (after ' + Math.round(marginalRate * 100) + '% tax)' : '\u2014');
+  s('fd-invested',  f(fdInvested));
+  s('fd-interest',  f(fdInterest));
+
+  s('fd-total2',    f(totalB));
+  s('fd-epf2',      f(e2.netCorpus));
+  s('fd-epfrate',   epfRate.toFixed(2) + '% (tax-free compounding)');
+  s('fd-epfinv',    f(e2.totalInvested));
+  s('fd-epfint',    f(e2.interest));
+  s('fd-addlpf',    f(pf12 - 1800) + '/mo (\u20B9' + ((pf12-1800)*2*12).toLocaleString('en-IN') + '/yr ee+er)');
+  s('fd-advantage', advantage > 0 ? '+' + f(advantage) : '\u2212' + f(Math.abs(advantage)));
+
+  const vEl = document.getElementById('fd-verdict');
+  if (vEl) {
+    if (monthlyExtra <= 0) {
+      vEl.textContent = 'At this CTC, PF @12% is \u2264 \u20B91,800 \u2014 no extra take-home to invest in FDs.';
+    } else if (advantage > 0) {
+      // NOTE: innerHTML used with computed numeric values only (no user input) for bold formatting
+      vEl.innerHTML =
+        '<strong>12% PF wins by ' + f(advantage) + '</strong> over ' + years + ' years. ' +
+        'EPF\u2019s tax-free compounding at ' + epfRate.toFixed(2) + '% beats an FD at ' + fdRate.toFixed(2) + '% (effective ' + (fdEffective*100).toFixed(2) + '% after ' + Math.round(marginalRate*100) + '% tax). ' +
+        'The FD route builds ' + f(fdCorpus) + ' but EPF\u2019s additional ' + f(e2.netCorpus - e1.netCorpus) + ' corpus more than covers it. ' +
+        '<strong>Verdict: 12% PF is the better long-term wealth builder.</strong>';
+    } else {
+      vEl.innerHTML =
+        '<strong>\u20B91,800 PF + FD wins by ' + f(Math.abs(advantage)) + '</strong> over ' + years + ' years. ' +
+        'The FD corpus of ' + f(fdCorpus) + ' (from ' + f(monthlyExtra) + '/mo) outpaces the additional EPF corpus of ' + f(e2.netCorpus - e1.netCorpus) + ' under 12% PF. ' +
+        'However, EPF offers lock-in discipline and employer matching \u2014 the FD route requires consistent manual investment. ' +
+        '<strong>Choose based on your investment discipline.</strong>';
+    }
+  }
+}
+
+document.getElementById('ctc').addEventListener('input', () => { compute(); computeEPF(); computeFD(); });
+document.getElementById('epf-years').addEventListener('input', () => { computeEPF(); computeFD(); });
+document.getElementById('epf-rate').addEventListener('input', () => { computeEPF(); computeFD(); });
+document.getElementById('fd-rate').addEventListener('input', computeFD);
 compute();
 computeEPF();
+computeFD();
 </script>
 </body>
 </html>
