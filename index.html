@@ -1028,6 +1028,71 @@
 
   </div>
 
+  <div class="section-divider">
+    <div class="section-divider-line"></div>
+    <div class="section-divider-label">Equity mutual fund alternative</div>
+    <div class="section-divider-line"></div>
+  </div>
+
+  <div class="epf-section" id="mf-section">
+
+    <div class="epf-tax-note" style="border-color:rgba(105,240,174,0.15);background:rgba(105,240,174,0.04)">
+      <strong style="color:var(--green)">What if you invest the difference in equity mutual funds?</strong>
+      Equity MFs historically deliver ~12% p.a. but gains are taxed as <strong style="color:var(--green)">LTCG at 12.5%</strong> (Budget 2024).
+      Only ₹1.25L of long-term capital gains per year is exempt.
+      Compare: EPF compounds <strong>tax-free</strong> at ~8.25% vs MF at higher rate but with tax drag on exit.
+    </div>
+
+    <div class="epf-controls" style="grid-template-columns:1fr">
+      <div class="epf-control-group">
+        <div class="epf-control-label">Expected equity MF return (p.a.) <span id="lbl-mf-rate">12.00%</span></div>
+        <input type="range" id="mf-rate" min="8" max="18" value="12" step="0.5">
+      </div>
+    </div>
+
+    <div class="epf-corpus-cards">
+      <div class="corpus-card" style="border-color:rgba(105,240,174,0.2)">
+        <div class="corpus-pill" style="background:rgba(105,240,174,0.1);color:var(--green)">₹1,800 PF + Equity MF</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">Total wealth at retirement</div>
+        <div class="corpus-val" id="mf-total1" style="color:var(--green)">—</div>
+        <div class="corpus-meta">
+          <div class="corpus-meta-row"><span class="corpus-meta-key">EPF corpus (₹1,800 PF)</span><span class="corpus-meta-val" id="mf-epf1">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Monthly SIP in equity MF</span><span class="corpus-meta-val" id="mf-monthly">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">MF corpus (gross)</span><span class="corpus-meta-val" id="mf-gross">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Total invested in MF</span><span class="corpus-meta-val" id="mf-invested">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">LTCG (total gains)</span><span class="corpus-meta-val green" id="mf-ltcg">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">LTCG tax @12.5% (above ₹1.25L)</span><span class="corpus-meta-val" id="mf-tax">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">MF corpus (net of LTCG tax)</span><span class="corpus-meta-val green" id="mf-net">—</span></div>
+        </div>
+      </div>
+
+      <div class="corpus-card card-highlight-gold">
+        <div class="corpus-pill">12% PF only</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">Total wealth at retirement</div>
+        <div class="corpus-val" id="mf-total2">—</div>
+        <div class="corpus-meta">
+          <div class="corpus-meta-row"><span class="corpus-meta-key">EPF corpus (12% PF)</span><span class="corpus-meta-val" id="mf-epf2">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">EPF rate (tax-free compounding)</span><span class="corpus-meta-val amber" id="mf-epfrate">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Total invested in EPF</span><span class="corpus-meta-val" id="mf-epfinv">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">EPF interest earned</span><span class="corpus-meta-val green" id="mf-epfint">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Tax advantage</span><span class="corpus-meta-val amber" id="mf-taxadv">—</span></div>
+          <div class="corpus-meta-row"><span class="corpus-meta-key">Wealth difference vs MF route</span><span class="corpus-meta-val amber" id="mf-advantage">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:10px;color:var(--text-dim);font-family:var(--mono);margin-bottom:12px">
+      Wealth at 5-year milestones · ₹1,800 PF + MF vs 12% PF only (net of tax)
+    </div>
+    <div class="epf-growth-row" id="mf-milestones"></div>
+
+    <div class="verdict" style="border-color:rgba(105,240,174,0.3);margin-top:16px">
+      <div class="verdict-icon" style="color:var(--green)">→</div>
+      <div class="verdict-text" id="mf-verdict">—</div>
+    </div>
+
+  </div>
+
   <footer class="footer">
     <span>New Tax Regime · FY 2026-27 · Slabs unchanged from FY 2025-26 · Sec 87A rebate ₹60,000 (taxable income ≤ ₹12L) · 4% H&E Cess · ₹75,000 std deduction</span>
     <span>Structure: Basic 50% · HRA 25% · Special 25%</span>
@@ -1369,13 +1434,127 @@ function computeFD() {
   }
 }
 
-document.getElementById('ctc').addEventListener('input', () => { compute(); computeEPF(); computeFD(); });
-document.getElementById('epf-years').addEventListener('input', () => { computeEPF(); computeFD(); });
-document.getElementById('epf-rate').addEventListener('input', () => { computeEPF(); computeFD(); });
+function computeMF() {
+  const ctc     = +document.getElementById('ctc').value || 0;
+  const years   = +document.getElementById('epf-years').value || 25;
+  const epfRate = +document.getElementById('epf-rate').value || 8.25;
+  const mfRate  = +document.getElementById('mf-rate').value || 12;
+
+  document.getElementById('lbl-mf-rate').textContent = mfRate.toFixed(2) + '%';
+
+  const s = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+
+  if (ctc <= 0) return;
+
+  const mo    = ctc / 12;
+  const basic = mo * 0.5;
+  const pf12  = Math.round(basic * 0.12);
+
+  const s1 = calcScenario(ctc, 1800);
+  const s2 = calcScenario(ctc, pf12);
+  const marginalRate = getMarginalRate(s1.taxable);
+
+  const monthlyExtra = Math.max(0, s1.takeHome - s2.takeHome);
+  const annualMF = monthlyExtra * 12;
+
+  // MF: compounding at gross rate (tax only on exit — deferred taxation)
+  const mfR = mfRate / 100;
+  let mfCorpus = 0;
+  for (let y = 1; y <= years; y++) {
+    mfCorpus = (mfCorpus + annualMF) * (1 + mfR);
+  }
+  const mfInvested = annualMF * years;
+  const mfGains    = Math.max(0, mfCorpus - mfInvested);
+
+  // LTCG tax: 12.5% on gains above ₹1.25L (Budget 2024, per FY on redemption)
+  const LTCG_EXEMPT = 125000;
+  const LTCG_RATE   = 0.125;
+  const taxableGains = Math.max(0, mfGains - LTCG_EXEMPT);
+  const ltcgTax      = taxableGains * LTCG_RATE;
+  const mfNet        = mfCorpus - ltcgTax;
+
+  // EPF corpora
+  const ann1 = 1800 * 2 * 12;
+  const ann2 = pf12 * 2 * 12;
+  const e1 = calcEPF(ann1, years, epfRate, marginalRate);
+  const e2 = calcEPF(ann2, years, epfRate, marginalRate);
+
+  // Total wealth: route A = EPF(₹1800) + MF net; route B = EPF(12%)
+  const totalA = e1.netCorpus + mfNet;
+  const totalB = e2.netCorpus;
+  const advantage = totalB - totalA;
+
+  s('mf-total1',    f(totalA));
+  s('mf-epf1',      f(e1.netCorpus));
+  s('mf-monthly',   f(monthlyExtra) + '/mo');
+  s('mf-gross',     f(mfCorpus));
+  s('mf-invested',  f(mfInvested));
+  s('mf-ltcg',      f(mfGains));
+  s('mf-tax',       f(ltcgTax));
+  s('mf-net',       f(mfNet));
+
+  s('mf-total2',    f(totalB));
+  s('mf-epf2',      f(e2.netCorpus));
+  s('mf-epfrate',   epfRate.toFixed(2) + '% (tax-free compounding)');
+  s('mf-epfinv',    f(e2.totalInvested));
+  s('mf-epfint',    f(e2.interest));
+  s('mf-taxadv',    'EEE \u2014 maturity fully tax-free (service > 5 yrs)');
+  s('mf-advantage', advantage > 0 ? '+' + f(advantage) : '\u2212' + f(Math.abs(advantage)));
+
+  // Milestones
+  const milestones = [];
+  for (let y = 5; y <= Math.min(years, 30); y += 5) milestones.push(y);
+  if (milestones.length === 0) milestones.push(years);
+
+  const mEl = document.getElementById('mf-milestones');
+  // NOTE: innerHTML used with computed numeric values only (no user input)
+  mEl.innerHTML = milestones.map(y => {
+    let mc = 0;
+    for (let i = 1; i <= y; i++) mc = (mc + annualMF) * (1 + mfR);
+    const mGains = Math.max(0, mc - annualMF * y);
+    const mTax   = Math.max(0, mGains - LTCG_EXEMPT) * LTCG_RATE;
+    const mNet   = mc - mTax;
+    const eA = e1.netCorpus * y / years; // rough scale — use proper calc
+    const e1y = calcMilestone(ann1, y, epfRate);
+    const totalAy = e1y + mNet;
+    const totalBy = calcMilestone(ann2, y, epfRate);
+    return '<div class="growth-card">' +
+      '<div class="growth-year">' + y + ' yr' + (y>1?'s':'') + '</div>' +
+      '<div class="growth-val1" style="color:var(--green)">' + f(totalAy) + '</div>' +
+      '<div class="growth-sep">vs</div>' +
+      '<div class="growth-val2">' + f(totalBy) + '</div>' +
+    '</div>';
+  }).join('');
+
+  // Verdict
+  const vEl = document.getElementById('mf-verdict');
+  if (vEl) {
+    if (monthlyExtra <= 0) {
+      vEl.textContent = 'At this CTC, PF @12% is \u2264 \u20B91,800 \u2014 no extra take-home to invest in MFs.';
+    } else if (advantage > 0) {
+      vEl.innerHTML =
+        '<strong>12% PF wins by ' + f(advantage) + '</strong> over ' + years + ' years. ' +
+        'Even though equity MFs return ' + mfRate.toFixed(1) + '% vs EPF\u2019s ' + epfRate.toFixed(2) + '%, the LTCG tax of ' + f(ltcgTax) + ' on ' + f(mfGains) + ' in gains erodes the MF advantage. ' +
+        'EPF\u2019s tax-free compounding and employer matching make <strong>12% PF the better choice</strong> for this horizon.';
+    } else {
+      vEl.innerHTML =
+        '<strong>\u20B91,800 PF + Equity MF wins by ' + f(Math.abs(advantage)) + '</strong> over ' + years + ' years. ' +
+        'The MF route builds ' + f(mfNet) + ' (net of ' + f(ltcgTax) + ' LTCG tax) from ' + f(monthlyExtra) + '/mo SIP. ' +
+        'Combined with \u20B91,800 PF corpus of ' + f(e1.netCorpus) + ', total wealth is ' + f(totalA) + ' vs ' + f(totalB) + ' under 12% PF. ' +
+        'However, equity MF returns are <strong>not guaranteed</strong> \u2014 12% is a long-term expectation, not a promise. ' +
+        '<strong>This route suits disciplined investors comfortable with market volatility.</strong>';
+    }
+  }
+}
+
+function computeAll() { compute(); computeEPF(); computeFD(); computeMF(); }
+
+document.getElementById('ctc').addEventListener('input', computeAll);
+document.getElementById('epf-years').addEventListener('input', () => { computeEPF(); computeFD(); computeMF(); });
+document.getElementById('epf-rate').addEventListener('input', () => { computeEPF(); computeFD(); computeMF(); });
 document.getElementById('fd-rate').addEventListener('input', computeFD);
-compute();
-computeEPF();
-computeFD();
+document.getElementById('mf-rate').addEventListener('input', computeMF);
+computeAll();
 </script>
 </body>
 </html>
