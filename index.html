@@ -1173,13 +1173,24 @@ function calcSurcharge(taxAfterRebate, taxableIncome) {
 }
 
 function getMarginalRate(taxableIncome) {
-  if (taxableIncome <= 400000)  return 0;
-  if (taxableIncome <= 800000)  return 0.05;
-  if (taxableIncome <= 1200000) return 0.10;
-  if (taxableIncome <= 1600000) return 0.15;
-  if (taxableIncome <= 2000000) return 0.20;
-  if (taxableIncome <= 2400000) return 0.25;
-  return 0.30;
+  // Slab rate
+  let slabRate;
+  if (taxableIncome <= 400000)       slabRate = 0;
+  else if (taxableIncome <= 800000)  slabRate = 0.05;
+  else if (taxableIncome <= 1200000) slabRate = 0.10;
+  else if (taxableIncome <= 1600000) slabRate = 0.15;
+  else if (taxableIncome <= 2000000) slabRate = 0.20;
+  else if (taxableIncome <= 2400000) slabRate = 0.25;
+  else                               slabRate = 0.30;
+
+  // Surcharge on marginal rate
+  let scRate = 0;
+  if (taxableIncome > 20000000)      scRate = 0.25;
+  else if (taxableIncome > 10000000) scRate = 0.15;
+  else if (taxableIncome > 5000000)  scRate = 0.10;
+
+  // Effective marginal rate = slabRate * (1 + surcharge) * (1 + cess)
+  return slabRate * (1 + scRate) * 1.04;
 }
 
 function calcScenario(ctc, empPF) {
@@ -1559,7 +1570,6 @@ function computeMF() {
     const mGains = Math.max(0, mc - annualMF * y);
     const mTax   = Math.max(0, mGains - LTCG_EXEMPT) * LTCG_RATE;
     const mNet   = mc - mTax;
-    const eA = e1.netCorpus * y / years; // rough scale — use proper calc
     const e1y = calcMilestone(ann1, y, epfRate);
     const totalAy = e1y + mNet;
     const totalBy = calcMilestone(ann2, y, epfRate);
