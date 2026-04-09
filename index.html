@@ -871,6 +871,7 @@
         <tr class="row-subtotal"><td>Net taxable income</td><td id="tx-nti1">—</td><td id="tx-nti2">—</td></tr>
         <tr><td>Slab tax (new regime)</td><td id="tx-slab1" class="val-red">—</td><td id="tx-slab2" class="val-red">—</td></tr>
         <tr><td>Less: Sec 87A rebate (up to ₹60,000)</td><td id="tx-rebate1" class="val-accent">—</td><td id="tx-rebate2" class="val-accent">—</td></tr>
+        <tr><td>Add: Surcharge</td><td id="tx-sc1" class="val-red">—</td><td id="tx-sc2" class="val-red">—</td></tr>
         <tr><td>Add: 4% health & education cess</td><td id="tx-cess1" class="val-red">—</td><td id="tx-cess2" class="val-red">—</td></tr>
         <tr class="row-subtotal"><td>Total tax payable</td><td id="tx-total1" class="val-red">—</td><td id="tx-total2" class="val-red">—</td></tr>
         <tr><td>Effective tax rate</td><td id="tx-etr1">—</td><td id="tx-etr2">—</td></tr>
@@ -1131,6 +1132,46 @@ function applyRebateAndMarginalRelief(slabTax, taxableIncome) {
   return Math.min(slabTax, excessAboveLimit);
 }
 
+// Surcharge under new regime with marginal relief at each threshold
+function calcSurcharge(taxAfterRebate, taxableIncome) {
+  if (taxAfterRebate === 0) return 0;
+
+  const thresholds = [
+    { limit: 5000000,  rate: 0    },
+    { limit: 10000000, rate: 0.10 },
+    { limit: 20000000, rate: 0.15 },
+    { limit: Infinity, rate: 0.25 }  // New regime caps surcharge at 25%
+  ];
+
+  let applicableRate = 0;
+  for (const t of thresholds) {
+    if (taxableIncome <= t.limit) { applicableRate = t.rate; break; }
+  }
+
+  const rawSurcharge = taxAfterRebate * applicableRate;
+  if (applicableRate === 0) return 0;
+
+  // Marginal relief: total tax+surcharge at current slab can't exceed
+  // total tax at threshold + excess income above threshold
+  const prevThreshold = thresholds.find((_, i) =>
+    i + 1 < thresholds.length && thresholds[i + 1].rate === applicableRate
+  );
+  if (prevThreshold) {
+    const taxAtThreshold = calcSlabTax(prevThreshold.limit);
+    const rebatedAtThreshold = applyRebateAndMarginalRelief(taxAtThreshold, prevThreshold.limit);
+    const prevRate = prevThreshold.rate;
+    const totalAtThreshold = rebatedAtThreshold + rebatedAtThreshold * prevRate;
+    const excessIncome = taxableIncome - prevThreshold.limit;
+    const maxTotal = totalAtThreshold + excessIncome;
+    const currentTotal = taxAfterRebate + rawSurcharge;
+    if (currentTotal > maxTotal) {
+      return Math.max(0, maxTotal - taxAfterRebate);
+    }
+  }
+
+  return rawSurcharge;
+}
+
 function getMarginalRate(taxableIncome) {
   if (taxableIncome <= 400000)  return 0;
   if (taxableIncome <= 800000)  return 0.05;
@@ -1151,13 +1192,15 @@ function calcScenario(ctc, empPF) {
   const taxable  = Math.max(0, grossAnn - SD);
   const slabTax  = calcSlabTax(taxable);
   const taxAfterRebate = applyRebateAndMarginalRelief(slabTax, taxable);
-  const cess     = taxAfterRebate * 0.04;
-  const totalTax = taxAfterRebate + cess;
+  const surcharge = calcSurcharge(taxAfterRebate, taxable);
+  const taxPlusSurcharge = taxAfterRebate + surcharge;
+  const cess     = taxPlusSurcharge * 0.04;  // Cess on (tax + surcharge)
+  const totalTax = taxPlusSurcharge + cess;
   const rebate   = Math.max(0, slabTax - taxAfterRebate);
   const mtds     = Math.round(totalTax / 12);
   const takeHome = gross - empPF - mtds;
   const etr      = grossAnn > 0 ? totalTax / grossAnn : 0;
-  return { empPF, basic, hra, spl, gross, grossAnn, taxable, slabTax, rebate, taxAfterRebate, cess, totalTax, mtds, takeHome, etr };
+  return { empPF, basic, hra, spl, gross, grossAnn, taxable, slabTax, rebate, taxAfterRebate, surcharge, cess, totalTax, mtds, takeHome, etr };
 }
 
 function set(id, val, cls) {
@@ -1208,6 +1251,8 @@ function compute() {
   set('tx-slab1', f(s1.slabTax));  set('tx-slab2', f(s2.slabTax));
   set('tx-rebate1', s1.rebate > 0 ? `(${f(s1.rebate)})` : '—');
   set('tx-rebate2', s2.rebate > 0 ? `(${f(s2.rebate)})` : '—');
+  set('tx-sc1', s1.surcharge > 0 ? f(s1.surcharge) : '—');
+  set('tx-sc2', s2.surcharge > 0 ? f(s2.surcharge) : '—');
   set('tx-cess1', f(s1.cess));     set('tx-cess2', f(s2.cess));
   set('tx-total1',f(s1.totalTax)); set('tx-total2',f(s2.totalTax));
   set('tx-etr1',  p(s1.etr));      set('tx-etr2',  p(s2.etr));
