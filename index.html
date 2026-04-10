@@ -870,7 +870,7 @@
         <tr><td>Less: standard deduction</td><td id="tx-sd1" class="val-red">—</td><td id="tx-sd2" class="val-red">—</td></tr>
         <tr class="row-subtotal"><td>Net taxable income</td><td id="tx-nti1">—</td><td id="tx-nti2">—</td></tr>
         <tr><td>Slab tax (new regime)</td><td id="tx-slab1" class="val-red">—</td><td id="tx-slab2" class="val-red">—</td></tr>
-        <tr><td>Less: Sec 87A rebate (up to ₹60,000)</td><td id="tx-rebate1" class="val-accent">—</td><td id="tx-rebate2" class="val-accent">—</td></tr>
+        <tr><td id="tx-rebate-label">Less: Sec 87A rebate / marginal relief</td><td id="tx-rebate1" class="val-accent">—</td><td id="tx-rebate2" class="val-accent">—</td></tr>
         <tr><td>Add: Surcharge</td><td id="tx-sc1" class="val-red">—</td><td id="tx-sc2" class="val-red">—</td></tr>
         <tr><td>Add: 4% health & education cess</td><td id="tx-cess1" class="val-red">—</td><td id="tx-cess2" class="val-red">—</td></tr>
         <tr class="row-subtotal"><td>Total tax payable</td><td id="tx-total1" class="val-red">—</td><td id="tx-total2" class="val-red">—</td></tr>
@@ -922,10 +922,13 @@
     </div>
 
     <div class="epf-tax-note">
-      <strong>Tax treatment:</strong> EPF maturity is fully tax-free if service &gt; 5 years.
-      However, interest on employee PF contributions exceeding <strong>&#8377;2.5L/year</strong> is taxable at your marginal slab rate.
-      Employer contributions above <strong>&#8377;7.5L/year</strong> are taxable as perquisite.
-      The corpus figures below reflect gross corpus and a net-of-tax estimate on excess interest.
+      <strong>Tax treatment:</strong> EPF <em>maturity</em> (principal + accumulated interest withdrawn at retirement) is tax-free if service &gt; 5 years.
+      Separately, <em>annual accrual</em> of interest on employee contributions above <strong>&#8377;2.5L/year</strong> is taxable every year at your marginal slab rate.
+      Employer contributions above <strong>&#8377;7.5L/year</strong> (aggregate of EPF + NPS + superannuation) are taxable as perquisite in the year of contribution — this is already applied to the annual tax above.
+      <br><br>
+      <strong>Model assumption:</strong> employer PF contribution equals the employee's 12% contribution in full (no EPS split, no admin charge carve-out). Actual take-home and corpus for EPS-member employees will differ — the relative comparison between &#8377;1,800 and 12% PF stays directionally correct.
+      <br><br>
+      Corpus uses EPFO's monthly-balance interest rule: interest accrues on the running monthly balance and is credited once a year.
     </div>
 
     <div class="epf-corpus-cards">
@@ -1124,12 +1127,21 @@ function calcSlabTax(income) {
 function applyRebateAndMarginalRelief(slabTax, taxableIncome) {
   const REBATE_LIMIT = 1200000;
   if (taxableIncome <= REBATE_LIMIT) {
-    return 0; // Full Sec 87A rebate — zero tax
+    // Full Sec 87A rebate — tax becomes zero
+    return { taxAfterRebate: 0, rebate87A: slabTax, marginalRelief: 0 };
   }
-  // Above ₹12L: NO rebate (Sec 87A is all-or-nothing).
-  // Marginal relief prevents cliff: tax capped at (income − ₹12L)
+  // Above ₹12L: NO Sec 87A rebate (it's all-or-nothing).
+  // Marginal relief caps tax at (income − ₹12L) so crossing the line
+  // never costs more than the excess income itself.
   const excessAboveLimit = taxableIncome - REBATE_LIMIT;
-  return Math.min(slabTax, excessAboveLimit);
+  if (slabTax > excessAboveLimit) {
+    return {
+      taxAfterRebate: excessAboveLimit,
+      rebate87A: 0,
+      marginalRelief: slabTax - excessAboveLimit,
+    };
+  }
+  return { taxAfterRebate: slabTax, rebate87A: 0, marginalRelief: 0 };
 }
 
 // Surcharge under new regime with marginal relief at each threshold
@@ -1158,7 +1170,8 @@ function calcSurcharge(taxAfterRebate, taxableIncome) {
   );
   if (prevThreshold) {
     const taxAtThreshold = calcSlabTax(prevThreshold.limit);
-    const rebatedAtThreshold = applyRebateAndMarginalRelief(taxAtThreshold, prevThreshold.limit);
+    const { taxAfterRebate: rebatedAtThreshold } =
+      applyRebateAndMarginalRelief(taxAtThreshold, prevThreshold.limit);
     const prevRate = prevThreshold.rate;
     const totalAtThreshold = rebatedAtThreshold + rebatedAtThreshold * prevRate;
     const excessIncome = taxableIncome - prevThreshold.limit;
@@ -1193,6 +1206,11 @@ function getMarginalRate(taxableIncome) {
   return slabRate * (1 + scRate) * 1.04;
 }
 
+// Sec 17(2)(vii): employer contribution to EPF+NPS+superannuation aggregated
+// above ₹7.5L/year is a taxable perquisite in the employee's hands.
+// Assumption: employer matches employee PF exactly; no NPS/superannuation.
+const EMPLOYER_PERQ_THRESHOLD = 750000;
+
 function calcScenario(ctc, empPF) {
   const mo      = ctc / 12;
   const basic   = mo * 0.5;
@@ -1200,18 +1218,29 @@ function calcScenario(ctc, empPF) {
   const spl     = mo * 0.25 - empPF;
   const gross   = basic + hra + spl;
   const grossAnn = gross * 12;
-  const taxable  = Math.max(0, grossAnn - SD);
+
+  // Taxable perquisite: employer annual contribution above ₹7.5L
+  const employerAnnual = empPF * 12;
+  const taxablePerquisite = Math.max(0, employerAnnual - EMPLOYER_PERQ_THRESHOLD);
+
+  const taxable  = Math.max(0, grossAnn - SD + taxablePerquisite);
   const slabTax  = calcSlabTax(taxable);
-  const taxAfterRebate = applyRebateAndMarginalRelief(slabTax, taxable);
+  const { taxAfterRebate, rebate87A, marginalRelief } =
+    applyRebateAndMarginalRelief(slabTax, taxable);
   const surcharge = calcSurcharge(taxAfterRebate, taxable);
   const taxPlusSurcharge = taxAfterRebate + surcharge;
   const cess     = taxPlusSurcharge * 0.04;  // Cess on (tax + surcharge)
   const totalTax = taxPlusSurcharge + cess;
-  const rebate   = Math.max(0, slabTax - taxAfterRebate);
+  const rebateShown = rebate87A + marginalRelief; // kept for legacy UI slot
   const mtds     = Math.round(totalTax / 12);
   const takeHome = gross - empPF - mtds;
   const etr      = grossAnn > 0 ? totalTax / grossAnn : 0;
-  return { empPF, basic, hra, spl, gross, grossAnn, taxable, slabTax, rebate, taxAfterRebate, surcharge, cess, totalTax, mtds, takeHome, etr };
+  return {
+    empPF, basic, hra, spl, gross, grossAnn,
+    taxablePerquisite, taxable,
+    slabTax, rebate: rebateShown, rebate87A, marginalRelief,
+    taxAfterRebate, surcharge, cess, totalTax, mtds, takeHome, etr
+  };
 }
 
 function set(id, val, cls) {
@@ -1235,7 +1264,7 @@ function compute() {
 
   set('tag-basic', `Basic 50% — ${f(Math.round(mo * 0.5))}/mo`);
   set('tag-hra',   `HRA 25% — ${f(Math.round(mo * 0.25))}/mo`);
-  set('tag-spl',   `Special 25% — ${f(Math.round(mo * 0.25))}/mo (PF absorbed here)`);
+  set('tag-spl',   `Special 25% — ${f(Math.round(mo * 0.25))}/mo (model: PF deducted from this head)`);
 
   set('c1-takehome', f(s1.takeHome));
   set('c1-tds',  f(s1.mtds));
@@ -1269,28 +1298,60 @@ function compute() {
   set('tx-etr1',  p(s1.etr));      set('tx-etr2',  p(s2.etr));
 
   const taxSave = Math.round(s1.totalTax - s2.totalTax);
-  const thDiff  = Math.round(s1.takeHome - s2.takeHome);
+  const thDiff  = Math.round(s1.takeHome - s2.takeHome); // positive = 12% costs more in hand
   const thLoss  = thDiff * 12;
   const net     = taxSave - thLoss;
+  const noExtraPF = pf12 <= 1800; // at/below crossover, both scenarios identical
+
+  // Rebate row label: only say "Sec 87A" when it actually applied
+  const rebateLabelEl = document.getElementById('tx-rebate-label');
+  if (rebateLabelEl) {
+    const s1Has = s1.rebate87A > 0;
+    const s2Has = s2.rebate87A > 0;
+    const anyMR = s1.marginalRelief > 0 || s2.marginalRelief > 0;
+    if (s1Has || s2Has) {
+      rebateLabelEl.textContent = 'Less: Sec 87A rebate (taxable income \u2264 \u20B912L)';
+    } else if (anyMR) {
+      rebateLabelEl.textContent = 'Less: Marginal relief (\u20B912L cliff)';
+    } else {
+      rebateLabelEl.textContent = 'Less: Sec 87A rebate / marginal relief';
+    }
+  }
 
   set('i-taxsave', f(taxSave));
-  set('i-thloss',  f(thLoss));
-  set('i-thsub',   `${f(thDiff)} / month less in hand`);
+  if (noExtraPF) {
+    set('i-thloss', f(0));
+    set('i-thsub',  'no extra PF above \u20B91,800');
+  } else {
+    set('i-thloss', f(thLoss));
+    set('i-thsub',  `${f(thDiff)} / month less in hand`);
+  }
 
   const netEl = document.getElementById('i-net');
   if (netEl) {
-    netEl.textContent = (net >= 0 ? '+' : '−') + f(Math.abs(net));
-    netEl.className = 'impact-val ' + (net >= 0 ? 'green' : 'red');
+    if (noExtraPF) {
+      netEl.textContent = f(0);
+      netEl.className = 'impact-val';
+    } else {
+      netEl.textContent = (net >= 0 ? '+' : '\u2212') + f(Math.abs(net));
+      netEl.className = 'impact-val ' + (net >= 0 ? 'green' : 'red');
+    }
   }
-  set('i-netsub', net >= 0 ? 'net annual gain under 12%' : 'net annual shortfall under 12%');
+  if (noExtraPF) {
+    set('i-netsub', 'scenarios are identical');
+  } else {
+    set('i-netsub', net >= 0 ? 'net annual gain under 12%' : 'net annual shortfall under 12%');
+  }
 
   // NOTE: innerHTML used intentionally with computed numeric values (no user input) for bold formatting
   const verdictEl = document.getElementById('verdict-text');
   if (verdictEl) {
-    const rebateNote = s1.rebate > 0 ? ' Sec 87A rebate applies \u2014 taxable income \u2264 \u20B912L.' : '';
+    // Only show the 87A note when Sec 87A *actually* applied (≤ ₹12L taxable)
+    const anySec87A = s1.rebate87A > 0 || s2.rebate87A > 0;
+    const rebateNote = anySec87A ? ' Sec 87A rebate applies \u2014 taxable income \u2264 \u20B912L.' : '';
     let verdictBody;
-    if (thDiff <= 0) {
-      verdictBody = 'At this CTC, PF @12% of basic (' + f(pf12) + '/mo) is \u2264 \u20B91,800 \u2014 both scenarios are identical or \u20B91,800 costs more. <strong>Stick with 12% PF.</strong>' + rebateNote;
+    if (noExtraPF) {
+      verdictBody = 'At this CTC, PF @12% of basic (' + f(pf12) + '/mo) is \u2264 \u20B91,800 \u2014 the minimum statutory PF already equals or exceeds 12% of basic. Both scenarios are identical. <strong>No decision to make.</strong>' + rebateNote;
     } else if (net >= 0) {
       verdictBody =
         '<strong>PF @12%</strong> saves <strong>' + f(taxSave) + '/year in tax</strong>, which more than offsets the <strong>' + f(thDiff) + '/month take-home drop</strong> (' + f(thLoss) + '/year). ' +
@@ -1306,27 +1367,37 @@ function compute() {
   }
 }
 
+// EPFO interest rule (official): interest accrues as *simple* interest on
+// the monthly running balance (1/12 of annual rate per month) and is
+// credited once at year-end. Year-over-year, the credited interest then
+// compounds. This is NOT the same as monthly compounding at r/12 —
+// intra-year interest does not earn interest until the year-end credit.
 function calcEPF(annualPF, years, rate, marginalRate) {
   // annualPF = total (employee + employer) annual contribution
-  // FV of growing annuity paid at start of each year
-  const r = rate / 100;
+  const monthly = annualPF / 12;
+  const monthlyRate = (rate / 100) / 12;
   let corpus = 0;
-  for (let y = 1; y <= years; y++) {
-    corpus = (corpus + annualPF) * (1 + r);
+  for (let y = 0; y < years; y++) {
+    let yearInterest = 0;
+    for (let m = 0; m < 12; m++) {
+      corpus += monthly;                    // deposit at start of month
+      yearInterest += corpus * monthlyRate; // simple accrual on end-of-month balance
+    }
+    corpus += yearInterest;                 // credited once at year-end
   }
   const totalInvested = annualPF * years;
   const interest = corpus - totalInvested;
 
-  // Taxable interest: employee contribution > 2.5L/yr attracts tax on interest
-  // employer contribution > 7.5L/yr attracts tax as perquisite
-  // Here we approximate: interest proportionate to employee share above 2.5L
-  const eeAnn = annualPF / 2; // employee = employer split assumed equal
+  // Taxable interest: employee contribution > ₹2.5L/yr attracts tax on the
+  // interest earned on the excess portion. Employer perquisite above ₹7.5L
+  // is handled upstream in calcScenario(); here we tax only excess-ee interest.
+  // Approximation: employee share = 50% of total annual PF (same assumption
+  // used elsewhere in this file — see the UI note).
+  const eeAnn = annualPF / 2;
   const excessEeAnn = Math.max(0, eeAnn - 250000);
-  // Taxable interest = interest on excess employee contribution (proportionate)
   const taxableIntPct = eeAnn > 0 ? excessEeAnn / eeAnn : 0;
-  const taxableInterest = interest * taxableIntPct * 0.5; // only ee portion of interest
-  const taxOnInterest = taxableInterest * marginalRate * years / years; // rough annual avg
-  // Better: cumulative tax on interest (conservative estimate as lump sum)
+  // Only the employee half of interest is subject to this carve-out
+  const taxableInterest = interest * 0.5 * taxableIntPct;
   const estTaxOnInterest = taxableInterest * marginalRate;
 
   const netCorpus = corpus - estTaxOnInterest;
@@ -1334,9 +1405,18 @@ function calcEPF(annualPF, years, rate, marginalRate) {
 }
 
 function calcMilestone(annualPF, year, rate) {
-  const r = rate / 100;
+  // Same monthly-balance EPFO convention as calcEPF
+  const monthly = annualPF / 12;
+  const monthlyRate = (rate / 100) / 12;
   let c = 0;
-  for (let y = 1; y <= year; y++) c = (c + annualPF) * (1 + r);
+  for (let y = 0; y < year; y++) {
+    let yearInterest = 0;
+    for (let m = 0; m < 12; m++) {
+      c += monthly;
+      yearInterest += c * monthlyRate;
+    }
+    c += yearInterest;
+  }
   return c;
 }
 
@@ -1403,10 +1483,15 @@ function computeEPF() {
   const addlNet    = Math.round(e2.netCorpus - e1.netCorpus);
   const verdictEl  = document.getElementById('epf-verdict');
   if (verdictEl) {
-    verdictEl.innerHTML =
-      `Over <strong>${years} years</strong> at <strong>${rate.toFixed(2)}% p.a.</strong>, PF @12% builds a corpus of <strong>${f(e2.corpus)}</strong> vs <strong>${f(e1.corpus)}</strong> under &#8377;1,800 — an additional <strong>${f(addlCorpus)}</strong> in gross wealth. ` +
-      `After estimated tax on excess interest, the additional net corpus is <strong>${f(addlNet)}</strong>. ` +
-      `EPF maturity remains tax-free; only interest on employee contributions above &#8377;2.5L/year attracts tax at your ~${Math.round(marginalRate*100)}% marginal rate.`;
+    if (pf12 <= 1800) {
+      verdictEl.textContent =
+        `At this CTC, PF @12% of basic is already ≤ ₹1,800, so both scenarios build the same corpus. No incremental EPF decision exists at this income level.`;
+    } else {
+      verdictEl.innerHTML =
+        `Over <strong>${years} years</strong> at <strong>${rate.toFixed(2)}% p.a.</strong>, PF @12% builds a corpus of <strong>${f(e2.corpus)}</strong> vs <strong>${f(e1.corpus)}</strong> under &#8377;1,800 — an additional <strong>${f(addlCorpus)}</strong> in gross wealth. ` +
+        `After estimated tax on excess-contribution interest, the additional net corpus is <strong>${f(addlNet)}</strong>. ` +
+        `Withdrawn maturity (principal + interest) is tax-free after 5 years of service, but annual interest on employee contributions above &#8377;2.5L/year is taxed every year at your ~${Math.round(marginalRate*100)}% marginal rate.`;
+    }
   }
 }
 
@@ -1433,14 +1518,24 @@ function computeFD() {
   const monthlyExtra = Math.max(0, s1.takeHome - s2.takeHome);
   const annualFD = monthlyExtra * 12;
 
-  // FD: interest taxed annually at marginal rate
-  const fdEffective = (fdRate / 100) * (1 - marginalRate);
+  // FD: interest is taxed every year at the saver's marginal slab rate
+  // (TDS at source + true-up). We model monthly deposits with simple
+  // monthly accrual of *post-tax* interest, credited annually — same
+  // timing convention as EPF so the comparison is apples-to-apples.
+  const fdEffectiveAnnual = (fdRate / 100) * (1 - marginalRate);
+  const fdMonthlyRate = fdEffectiveAnnual / 12;
   let fdCorpus = 0;
-  for (let y = 1; y <= years; y++) {
-    fdCorpus = (fdCorpus + annualFD) * (1 + fdEffective);
+  for (let y = 0; y < years; y++) {
+    let yearInt = 0;
+    for (let m = 0; m < 12; m++) {
+      fdCorpus += monthlyExtra;
+      yearInt += fdCorpus * fdMonthlyRate;
+    }
+    fdCorpus += yearInt;
   }
   const fdInvested = annualFD * years;
   const fdInterest = fdCorpus - fdInvested;
+  const fdEffective = fdEffectiveAnnual; // kept for downstream UI lines below
 
   // EPF corpora (reuse calcEPF)
   const ann1 = 1800 * 2 * 12;
@@ -1466,8 +1561,13 @@ function computeFD() {
   s('fd-epfrate',   epfRate.toFixed(2) + '% (tax-free compounding)');
   s('fd-epfinv',    f(e2.totalInvested));
   s('fd-epfint',    f(e2.interest));
-  s('fd-addlpf',    f(pf12 - 1800) + '/mo (\u20B9' + ((pf12-1800)*2*12).toLocaleString('en-IN') + '/yr ee+er)');
-  s('fd-advantage', advantage > 0 ? '+' + f(advantage) : '\u2212' + f(Math.abs(advantage)));
+  if (pf12 > 1800) {
+    s('fd-addlpf', f(pf12 - 1800) + '/mo (\u20B9' + ((pf12 - 1800) * 2 * 12).toLocaleString('en-IN') + '/yr ee+er)');
+    s('fd-advantage', advantage > 0 ? '+' + f(advantage) : '\u2212' + f(Math.abs(advantage)));
+  } else {
+    s('fd-addlpf', 'No additional PF over \u20B91,800');
+    s('fd-advantage', '\u2014');
+  }
 
   const vEl = document.getElementById('fd-verdict');
   if (vEl) {
@@ -1513,11 +1613,16 @@ function computeMF() {
   const monthlyExtra = Math.max(0, s1.takeHome - s2.takeHome);
   const annualMF = monthlyExtra * 12;
 
-  // MF: compounding at gross rate (tax only on exit — deferred taxation)
+  // MF: monthly SIP, gross compounding (LTCG paid on exit).
+  // Monthly rate = annualRate/12 (standard SIP convention).
   const mfR = mfRate / 100;
+  const mfMonthlyRate = mfR / 12;
   let mfCorpus = 0;
-  for (let y = 1; y <= years; y++) {
-    mfCorpus = (mfCorpus + annualMF) * (1 + mfR);
+  for (let y = 0; y < years; y++) {
+    for (let m = 0; m < 12; m++) {
+      mfCorpus += monthlyExtra;
+      mfCorpus += mfCorpus * mfMonthlyRate;
+    }
   }
   const mfInvested = annualMF * years;
   const mfGains    = Math.max(0, mfCorpus - mfInvested);
@@ -1555,7 +1660,11 @@ function computeMF() {
   s('mf-epfinv',    f(e2.totalInvested));
   s('mf-epfint',    f(e2.interest));
   s('mf-taxadv',    'EEE \u2014 maturity fully tax-free (service > 5 yrs)');
-  s('mf-advantage', advantage > 0 ? '+' + f(advantage) : '\u2212' + f(Math.abs(advantage)));
+  if (pf12 > 1800) {
+    s('mf-advantage', advantage > 0 ? '+' + f(advantage) : '\u2212' + f(Math.abs(advantage)));
+  } else {
+    s('mf-advantage', '\u2014');
+  }
 
   // Milestones
   const milestones = [];
@@ -1566,7 +1675,12 @@ function computeMF() {
   // NOTE: innerHTML used with computed numeric values only (no user input)
   mEl.innerHTML = milestones.map(y => {
     let mc = 0;
-    for (let i = 1; i <= y; i++) mc = (mc + annualMF) * (1 + mfR);
+    for (let yy = 0; yy < y; yy++) {
+      for (let mm = 0; mm < 12; mm++) {
+        mc += monthlyExtra;
+        mc += mc * mfMonthlyRate;
+      }
+    }
     const mGains = Math.max(0, mc - annualMF * y);
     const mTax   = Math.max(0, mGains - LTCG_EXEMPT) * LTCG_RATE;
     const mNet   = mc - mTax;
