@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="PF Structure Calculator for FY 2026-27 — compare ₹1,800 vs 12% PF contribution against take-home, tax, EPF corpus, FD and mutual fund alternatives under India's New Tax Regime.">
 <title>SalaryCalc — PF Structure Calculator · FY 2026-27</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -17,8 +18,8 @@
     --red: #FF6B6B;
     --amber: #FFD54F;
     --text: #E8F4FD;
-    --text-muted: #7A9BB5;
-    --text-dim: #4A6880;
+    --text-muted: #A8C0D4;
+    --text-dim: #8CA3B8;
     --border: rgba(79,195,247,0.12);
     --border-bright: rgba(79,195,247,0.3);
     --mono: 'DM Mono', monospace;
@@ -552,6 +553,23 @@
     background: var(--accent);
     border-radius: 50%;
     cursor: pointer;
+    border: none;
+  }
+
+  input[type=range]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+  }
+
+  input[type=range]::-moz-range-track {
+    height: 4px;
+    background: var(--border-bright);
+    border-radius: 2px;
+    border: none;
   }
 
   .epf-corpus-cards {
@@ -618,6 +636,19 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .corpus-meta-row > .corpus-meta-key {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .corpus-meta-row > .corpus-meta-val {
+    flex: 0 0 auto;
+    text-align: right;
+    white-space: nowrap;
   }
 
   .corpus-meta-key {
@@ -750,16 +781,32 @@
     .impact-row { grid-template-columns: 1fr; }
     .app { padding: 28px 16px 48px; }
     .card-take-home { font-size: 24px; }
+    .epf-corpus-cards { grid-template-columns: 1fr; }
+    .epf-growth-row { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 380px) {
+    .app { padding: 24px 12px 40px; }
+    .corpus-card { padding: 16px 14px; }
+    .corpus-meta-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+    .corpus-meta-row > .corpus-meta-val {
+      text-align: left;
+    }
+    .footer { flex-direction: column; }
   }
 </style>
 </head>
 <body>
-<div class="app">
+<main class="app">
 
   <header class="header">
     <div class="logo">
       <div class="logo-mark">Salary Tool</div>
-      <div class="logo-title">PF Structure<br>Calculator</div>
+      <h1 class="logo-title">PF Structure<br>Calculator</h1>
     </div>
     <div class="regime-badge">New Tax Regime · FY 2026-27</div>
   </header>
@@ -913,11 +960,11 @@
     <div class="epf-controls">
       <div class="epf-control-group">
         <div class="epf-control-label">Years to retirement <span id="lbl-years">5</span></div>
-        <input type="range" id="epf-years" min="5" max="35" value="5" step="1">
+        <input type="range" id="epf-years" min="5" max="35" value="5" step="1" aria-label="Years to retirement">
       </div>
       <div class="epf-control-group">
         <div class="epf-control-label">EPF interest rate (p.a.) <span id="lbl-rate">8.25%</span></div>
-        <input type="range" id="epf-rate" min="7" max="10" value="8.25" step="0.25">
+        <input type="range" id="epf-rate" min="7" max="10" value="8.25" step="0.25" aria-label="EPF interest rate percentage per annum">
       </div>
     </div>
 
@@ -991,7 +1038,7 @@
     <div class="epf-controls" style="grid-template-columns:1fr">
       <div class="epf-control-group">
         <div class="epf-control-label">Bank FD rate (3–5 yr tenure) <span id="lbl-fd-rate">7.00%</span></div>
-        <input type="range" id="fd-rate" min="5" max="9" value="7" step="0.25">
+        <input type="range" id="fd-rate" min="5" max="9" value="7" step="0.25" aria-label="Bank FD interest rate percentage per annum">
       </div>
     </div>
 
@@ -1050,7 +1097,7 @@
     <div class="epf-controls" style="grid-template-columns:1fr">
       <div class="epf-control-group">
         <div class="epf-control-label">Expected equity MF return (p.a.) <span id="lbl-mf-rate">12.00%</span></div>
-        <input type="range" id="mf-rate" min="8" max="18" value="12" step="0.5">
+        <input type="range" id="mf-rate" min="8" max="18" value="12" step="0.5" aria-label="Expected equity mutual fund return percentage per annum">
       </div>
     </div>
 
@@ -1102,7 +1149,7 @@
     <span>Structure: Basic 50% · HRA 25% · Special 25%</span>
   </footer>
 
-</div>
+</main>
 
 <script>
 const f = n => '₹' + Math.round(n).toLocaleString('en-IN');
